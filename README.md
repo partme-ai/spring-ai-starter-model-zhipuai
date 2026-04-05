@@ -56,7 +56,7 @@
 
 ``` xml
 <dependency>
-	<groupId>com.github.teachingai</groupId>
+	<groupId>com.github.partmeai</groupId>
 	<artifactId>spring-ai-zhipuai-spring-boot-starter</artifactId>
 	<version>${project.version}</version>
 </dependency>
@@ -64,7 +64,7 @@
 
 ### Sample
 
-使用示例请参见 [Spring AI Examples](https://github.com/TeachingAI/spring-ai-examples)
+使用示例请参见 [Spring AI Examples](https://github.com/PartMe.AI/spring-ai-examples)
 
 
 ### License
