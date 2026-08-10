@@ -3,12 +3,10 @@ package org.springframework.ai.zhipuai.autoconfigure;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.zhipu.oapi.ClientV4;
 import com.zhipu.oapi.core.cache.ICache;
-import org.springframework.ai.autoconfigure.retry.SpringAiRetryAutoConfiguration;
-import org.springframework.ai.model.function.FunctionCallback;
-import org.springframework.ai.model.function.FunctionCallbackContext;
+import org.springframework.ai.retry.autoconfigure.SpringAiRetryAutoConfiguration;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.zhipuai.ZhipuAiChatClient;
 import org.springframework.ai.zhipuai.ZhipuAiEmbeddingClient;
 import org.springframework.ai.zhipuai.ZhipuAiFineTuningClient;
@@ -18,11 +16,9 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.core.retry.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -32,7 +28,7 @@ import java.util.List;
 /**
  * {@link AutoConfiguration Auto-configuration} for 智普AI Chat Client.
  */
-@AutoConfiguration(after = { RestClientAutoConfiguration.class, SpringAiRetryAutoConfiguration.class })
+@AutoConfiguration(after = SpringAiRetryAutoConfiguration.class)
 @EnableConfigurationProperties({ ZhipuAiChatProperties.class, ZhipuAiConnectionProperties.class, ZhipuAiEmbeddingProperties.class, ZhipuAiImageProperties.class })
 @ConditionalOnClass(ClientV4.class)
 public class ZhipuAiAutoConfiguration {
@@ -42,21 +38,18 @@ public class ZhipuAiAutoConfiguration {
     @ConditionalOnProperty(prefix = ZhipuAiChatProperties.CONFIG_PREFIX, name = "enabled")
     public ZhipuAiChatClient zhipuAiChatClient(ZhipuAiConnectionProperties connectionProperties,
                                                ZhipuAiChatProperties chatProperties,
-                                               List<FunctionCallback> toolFunctionCallbacks,
-                                               FunctionCallbackContext functionCallbackContext,
+                                               ObjectProvider<ToolCallback> toolFunctionCallbacks,
                                                ObjectProvider<ICache> cacheProvider,
                                                ObjectProvider<RetryTemplate> retryTemplateProvider) {
-        if (!CollectionUtils.isEmpty(toolFunctionCallbacks)) {
-            chatProperties.getOptions().getFunctionCallbacks().addAll(toolFunctionCallbacks);
-        }
+        chatProperties.getOptions().setToolCallbacks(toolFunctionCallbacks.orderedStream().toList());
 
         String apiKey = StringUtils.hasText(chatProperties.getApiKey()) ? chatProperties.getApiKey() : connectionProperties.getApiKey();
         Assert.hasText(apiKey, "ZhipuAI API key must be set");
 
         ClientV4 zhipuClient = new ClientV4.Builder(apiKey).tokenCache(cacheProvider.getIfAvailable()).build();
 
-        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> RetryTemplate.builder().build());
-        return new ZhipuAiChatClient(zhipuClient, chatProperties.getOptions(), functionCallbackContext, retryTemplate);
+        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> new RetryTemplate());
+        return new ZhipuAiChatClient(zhipuClient, chatProperties.getOptions(), retryTemplate);
     }
 
     @Bean
@@ -71,7 +64,7 @@ public class ZhipuAiAutoConfiguration {
         Assert.hasText(apiKey, "ZhipuAI API key must be set");
 
         ClientV4 zhipuClient = new ClientV4.Builder(apiKey).tokenCache(cacheProvider.getIfAvailable()).build();
-        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> RetryTemplate.builder().build());
+        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> new RetryTemplate());
         return new ZhipuAiEmbeddingClient(zhipuClient, embeddingProperties.getMetadataMode(), embeddingProperties.getOptions(), retryTemplate);
     }
     @Bean
@@ -86,7 +79,7 @@ public class ZhipuAiAutoConfiguration {
         Assert.hasText(apiKey, "ZhipuAI API key must be set");
 
         ClientV4 zhipuClient = new ClientV4.Builder(apiKey).tokenCache(cacheProvider.getIfAvailable()).build();
-        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> RetryTemplate.builder().build());
+        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> new RetryTemplate());
         return new ZhipuAiFineTuningClient(zhipuClient, retryTemplate);
     }
 
@@ -103,25 +96,16 @@ public class ZhipuAiAutoConfiguration {
         Assert.hasText(apiKey, "ZhipuAI API key must be set");
 
         ClientV4 zhipuClient = new ClientV4.Builder(apiKey).tokenCache(cacheProvider.getIfAvailable()).build();
-        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> RetryTemplate.builder().build());
+        RetryTemplate retryTemplate = retryTemplateProvider.getIfAvailable(() -> new RetryTemplate());
         return new ZhipuAiImageClient(zhipuClient, imageProperties.getOptions(), retryTemplate);
     }
 
 
 
-    @Bean
-    @ConditionalOnMissingBean
-    public FunctionCallbackContext springAiFunctionManager(ApplicationContext context) {
-        FunctionCallbackContext manager = new FunctionCallbackContext();
-        manager.setApplicationContext(context);
-        return manager;
-    }
-
     public static ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         return mapper;
     }
 

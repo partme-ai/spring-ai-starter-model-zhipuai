@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.core.retry.RetryTemplate;
 import org.springframework.util.Assert;
 
 import java.util.Objects;
@@ -34,7 +34,7 @@ public class ZhipuAiFineTuningClient {
      * @return
      */
     public ResponseEntity<FileApiResponse> uploadFile( String purpose, String path) {
-        return retryTemplate.execute(context -> {
+        return retryTemplate.invoke(() -> {
             logger.debug("Uploading file");
             return ResponseEntity.ofNullable(zhipuClient.invokeUploadFileApi(purpose, path));
         });
@@ -46,10 +46,10 @@ public class ZhipuAiFineTuningClient {
      * @return
      */
     public ResponseEntity<FineTuningJob> createFineTuningJob(FineTuningJobRequest request) {
-        return retryTemplate.execute(context -> {
+        return retryTemplate.invoke(() -> {
             logger.debug("Listing files");
             CreateFineTuningJobApiResponse response = zhipuClient.createFineTuningJob(request);
-            if (Objects.nonNull(response)) {
+            if (Objects.isNull(response)) {
                 return ResponseEntity.internalServerError().build();
             }
             if (response.isSuccess()) {
@@ -65,10 +65,10 @@ public class ZhipuAiFineTuningClient {
      * @return
      */
     public ResponseEntity<FineTuningJob> retrieveFineTuningJobs(QueryFineTuningJobRequest request) {
-        return retryTemplate.execute(context -> {
+        return retryTemplate.invoke(() -> {
             logger.debug("Listing files");
             QueryFineTuningJobApiResponse response = zhipuClient.retrieveFineTuningJobs(request);
-            if (Objects.nonNull(response)) {
+            if (Objects.isNull(response)) {
                 return ResponseEntity.internalServerError().build();
             }
             if (response.isSuccess()) {
@@ -84,10 +84,10 @@ public class ZhipuAiFineTuningClient {
      * @return
      */
     public ResponseEntity<FineTuningEvent> queryFineTuningJobsEvents(QueryFineTuningJobRequest request) {
-        return retryTemplate.execute(context -> {
+        return retryTemplate.invoke(() -> {
             logger.debug("Listing files");
             QueryFineTuningEventApiResponse response = zhipuClient.queryFineTuningJobsEvents(request);
-            if (Objects.nonNull(response)) {
+            if (Objects.isNull(response)) {
                 return ResponseEntity.internalServerError().build();
             }
             if (response.isSuccess()) {
@@ -103,10 +103,9 @@ public class ZhipuAiFineTuningClient {
      * @return
      */
     public ResponseEntity<PersonalFineTuningJob> queryPersonalFineTuningJobs(QueryPersonalFineTuningJobRequest request) {
-        return retryTemplate.execute(context -> {
-            logger.debug("QueryPersonalFineTuningJob: Retry {} Times ", context.getRetryCount());
+        return retryTemplate.invoke(() -> {
             QueryPersonalFineTuningJobApiResponse response = zhipuClient.queryPersonalFineTuningJobs(request);
-            if (Objects.nonNull(response)) {
+            if (Objects.isNull(response)) {
                 return ResponseEntity.internalServerError().build();
             }
             if (response.isSuccess()) {

@@ -9,17 +9,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.*;
-import org.springframework.ai.model.ModelOptionsUtils;
 import org.springframework.ai.retry.RetryUtils;
 import org.springframework.ai.zhipuai.api.ZhipuAiEmbeddingOptions;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.core.retry.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Objects;
 
-public class ZhipuAiEmbeddingClient extends AbstractEmbeddingClient {
+public class ZhipuAiEmbeddingClient implements EmbeddingModel {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -61,14 +60,14 @@ public class ZhipuAiEmbeddingClient extends AbstractEmbeddingClient {
     }
 
     @Override
-    public List<Double> embed(Document document) {
+    public float[] embed(Document document) {
         Assert.notNull(document, "Document must not be null");
-        return this.embed(document.getFormattedContent(this.metadataMode));
+        return this.call(new EmbeddingRequest(List.of(document.getFormattedContent(this.metadataMode)), null)).getResult().getOutput();
     }
 
     @Override
     public EmbeddingResponse call(org.springframework.ai.embedding.EmbeddingRequest request) {
-        return this.retryTemplate.execute(ctx -> {
+        return this.retryTemplate.invoke(() -> {
 
             Assert.notEmpty(request.getInstructions(), "At least one text is required!");
             if (request.getInstructions().size() != 1) {
@@ -79,8 +78,8 @@ public class ZhipuAiEmbeddingClient extends AbstractEmbeddingClient {
                     ? new com.zhipu.oapi.service.v4.embedding.EmbeddingRequest(this.defaultOptions.getModel(), inputContent, "")
                     : new com.zhipu.oapi.service.v4.embedding.EmbeddingRequest(Constants.ModelEmbedding2, inputContent, "");
 
-            if (request.getOptions() != null && !EmbeddingOptions.EMPTY.equals(request.getOptions())) {
-                apiRequest = ModelOptionsUtils.merge(request.getOptions(), apiRequest, com.zhipu.oapi.service.v4.embedding.EmbeddingRequest.class);
+            if (request.getOptions() != null && request.getOptions().getModel() != null) {
+                apiRequest.setModel(request.getOptions().getModel());
             }
 
 
@@ -102,10 +101,11 @@ public class ZhipuAiEmbeddingClient extends AbstractEmbeddingClient {
 
             var metadata = generateResponseMetadata(embeddingResult.getModel(), embeddingResult.getUsage());
 
-            var embeddings = embeddingResult.getData()
-                    .stream()
-                    .map(e -> new Embedding(e.getEmbedding(), e.getIndex()))
-                    .toList();
+            var embeddings = embeddingResult.getData().stream().map(e -> {
+                float[] vector = new float[e.getEmbedding().size()];
+                for (int index = 0; index < vector.length; index++) vector[index] = e.getEmbedding().get(index).floatValue();
+                return new Embedding(vector, e.getIndex());
+            }).toList();
 
             return new EmbeddingResponse(embeddings, metadata);
 
@@ -113,12 +113,8 @@ public class ZhipuAiEmbeddingClient extends AbstractEmbeddingClient {
     }
 
     private EmbeddingResponseMetadata generateResponseMetadata(String model, Usage usage) {
-        var metadata = new EmbeddingResponseMetadata();
-        metadata.put("model", model);
-        metadata.put("prompt-tokens", usage.getPromptTokens());
-        metadata.put("completion-tokens", usage.getCompletionTokens());
-        metadata.put("total-tokens", usage.getTotalTokens());
-        return metadata;
+        return new EmbeddingResponseMetadata(model, new org.springframework.ai.chat.metadata.DefaultUsage(
+                usage.getPromptTokens(), usage.getCompletionTokens(), usage.getTotalTokens(), usage));
     }
 
 }

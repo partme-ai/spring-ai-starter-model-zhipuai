@@ -6,9 +6,7 @@ import org.springframework.util.Assert;
 
 import java.util.Objects;
 
-public class ZhipuAiImageResponseMetadata implements ImageResponseMetadata {
-
-    private final Long created;
+public class ZhipuAiImageResponseMetadata extends ImageResponseMetadata {
 
     public static ZhipuAiImageResponseMetadata from(ImageResult imageResult) {
         Assert.notNull(imageResult, "ImageResult must not be null");
@@ -16,17 +14,12 @@ public class ZhipuAiImageResponseMetadata implements ImageResponseMetadata {
     }
 
     protected ZhipuAiImageResponseMetadata(Long created) {
-        this.created = created;
-    }
-
-    @Override
-    public Long created() {
-        return this.created;
+        super(created);
     }
 
     @Override
     public String toString() {
-        return "ZhipuAiImageResponseMetadata{" + "created=" + created + '}';
+        return "ZhipuAiImageResponseMetadata{" + "created=" + getCreated() + '}';
     }
 
     @Override
@@ -35,12 +28,12 @@ public class ZhipuAiImageResponseMetadata implements ImageResponseMetadata {
             return true;
         if (!(o instanceof ZhipuAiImageResponseMetadata that))
             return false;
-        return Objects.equals(created, that.created);
+        return Objects.equals(getCreated(), that.getCreated());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(created);
+        return Objects.hash(getCreated());
     }
 
 }

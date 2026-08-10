@@ -8,18 +8,17 @@ import com.zhipu.oapi.service.v4.image.ImageResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.image.*;
-import org.springframework.ai.model.ModelOptionsUtils;
 import org.springframework.ai.retry.RetryUtils;
 import org.springframework.ai.zhipuai.api.ZhipuAiImageOptions;
 import org.springframework.ai.zhipuai.metadata.ZhipuAiImageGenerationMetadata;
 import org.springframework.ai.zhipuai.metadata.ZhipuAiImageResponseMetadata;
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.core.retry.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 
-public class ZhipuAiImageClient implements ImageClient {
+public class ZhipuAiImageClient implements ImageModel {
 
     private final static Logger logger = LoggerFactory.getLogger(ZhipuAiImageClient.class);
 
@@ -51,20 +50,15 @@ public class ZhipuAiImageClient implements ImageClient {
 
     @Override
     public ImageResponse call(ImagePrompt imagePrompt) {
-        return this.retryTemplate.execute(ctx -> {
+        return this.retryTemplate.invoke(() -> {
 
             var inputContent = CollectionUtils.firstElement(imagePrompt.getInstructions());
             CreateImageRequest imageRequest = new CreateImageRequest();
             imageRequest.setPrompt(inputContent.getText());
 
-            if (this.defaultOptions != null) {
-                imageRequest = ModelOptionsUtils.merge(this.defaultOptions, imageRequest, CreateImageRequest.class);
-            }
-
-            if (imagePrompt.getOptions() != null) {
-                imageRequest = ModelOptionsUtils.merge(toZhipuAiImageOptions(imagePrompt.getOptions()), imageRequest,
-                        CreateImageRequest.class);
-            }
+            ZhipuAiImageOptions options = imagePrompt.getOptions() == null ? this.defaultOptions
+                    : toZhipuAiImageOptions(imagePrompt.getOptions());
+            if (options != null) imageRequest.setModel(options.getModel());
 
             ImageApiResponse imageApiResponse = zhipuClient.createImage(imageRequest);
 

@@ -16,6 +16,7 @@ public class ZhipuAiEmbeddingOptions  implements EmbeddingOptions {
      */
     @JsonProperty("model")
     private String model;
+    private Integer dimensions;
 
     public void setModel(String model) {
         this.model = model;
@@ -24,6 +25,9 @@ public class ZhipuAiEmbeddingOptions  implements EmbeddingOptions {
     public String getModel() {
         return model;
     }
+
+    @Override public Integer getDimensions() { return dimensions; }
+    public void setDimensions(Integer dimensions) { this.dimensions = dimensions; }
 
 
     public static Builder builder() {
@@ -42,6 +46,8 @@ public class ZhipuAiEmbeddingOptions  implements EmbeddingOptions {
             this.options.setModel(model);
             return this;
         }
+
+        public Builder withDimensions(Integer dimensions) { this.options.setDimensions(dimensions); return this; }
 
         public ZhipuAiEmbeddingOptions build() {
             return this.options;
