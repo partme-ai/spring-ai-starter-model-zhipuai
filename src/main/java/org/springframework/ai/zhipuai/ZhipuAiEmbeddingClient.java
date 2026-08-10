@@ -11,7 +11,7 @@ import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.*;
 import org.springframework.ai.retry.RetryUtils;
 import org.springframework.ai.zhipuai.api.ZhipuAiEmbeddingOptions;
-import org.springframework.core.retry.RetryTemplate;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -67,7 +67,7 @@ public class ZhipuAiEmbeddingClient implements EmbeddingModel {
 
     @Override
     public EmbeddingResponse call(org.springframework.ai.embedding.EmbeddingRequest request) {
-        return this.retryTemplate.invoke(() -> {
+        return this.retryTemplate.execute(context -> {
 
             Assert.notEmpty(request.getInstructions(), "At least one text is required!");
             if (request.getInstructions().size() != 1) {

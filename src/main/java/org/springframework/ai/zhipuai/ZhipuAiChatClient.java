@@ -18,7 +18,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.zhipuai.api.ZhipuAiChatOptions;
 import org.springframework.ai.zhipuai.util.ApiUtils;
-import org.springframework.core.retry.RetryTemplate;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
@@ -52,11 +52,11 @@ public class ZhipuAiChatClient implements ChatModel {
         this.retryTemplate = retryTemplate;
     }
 
-    @Override public ChatOptions getOptions() { return defaultOptions; }
+    @Override public ChatOptions getDefaultOptions() { return defaultOptions; }
 
     @Override
     public ChatResponse call(Prompt prompt) {
-        return retryTemplate.invoke(() -> {
+        return retryTemplate.execute(context -> {
             ModelApiResponse response = zhipuClient.invokeModelApi(createRequest(prompt, false));
             if (!response.isSuccess() || response.getData() == null) {
                 throw new IllegalStateException("Failed to call Zhipu AI chat API: " + response.getMsg());
@@ -67,7 +67,7 @@ public class ZhipuAiChatClient implements ChatModel {
 
     @Override
     public Flux<ChatResponse> stream(Prompt prompt) {
-        return retryTemplate.invoke(() -> {
+        return retryTemplate.execute(context -> {
             ModelApiResponse response = zhipuClient.invokeModelApi(createRequest(prompt, true));
             if (!response.isSuccess()) return Flux.error(new IllegalStateException(response.getMsg()));
             return Flux.create(sink -> response.getFlowable().subscribe(new FlowableSubscriber<>() {
@@ -81,7 +81,7 @@ public class ZhipuAiChatClient implements ChatModel {
 
     ChatCompletionRequest createRequest(Prompt prompt, boolean stream) {
         ZhipuAiChatOptions options = prompt.getOptions() == null ? defaultOptions.mutate().build()
-                : defaultOptions.mutate().combineWith(prompt.getOptions().mutate()).build();
+                : defaultOptions.mutate().combineWith(prompt.getOptions()).build();
         List<ChatMessage> messages = prompt.getInstructions().stream()
                 .map(message -> new ChatMessage(message.getMessageType().getValue(), message.getText())).toList();
         List<ChatTool> tools = resolveTools(options.getToolCallbacks());

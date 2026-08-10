@@ -12,7 +12,7 @@ import org.springframework.ai.retry.RetryUtils;
 import org.springframework.ai.zhipuai.api.ZhipuAiImageOptions;
 import org.springframework.ai.zhipuai.metadata.ZhipuAiImageGenerationMetadata;
 import org.springframework.ai.zhipuai.metadata.ZhipuAiImageResponseMetadata;
-import org.springframework.core.retry.RetryTemplate;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -50,7 +50,7 @@ public class ZhipuAiImageClient implements ImageModel {
 
     @Override
     public ImageResponse call(ImagePrompt imagePrompt) {
-        return this.retryTemplate.invoke(() -> {
+        return this.retryTemplate.execute(context -> {
 
             var inputContent = CollectionUtils.firstElement(imagePrompt.getInstructions());
             CreateImageRequest imageRequest = new CreateImageRequest();
