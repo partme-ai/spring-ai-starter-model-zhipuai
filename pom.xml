@@ -11,7 +11,7 @@
 	</parent>
 
 	<groupId>com.github.partmeai</groupId>
-	<artifactId>spring-ai-zhipuai-spring-boot-starter</artifactId>
+	<artifactId>spring-ai-starter-model-zhipuai</artifactId>
 	<description>Spring Boot Starter For Spring AI Implementation Base On ZhiPu AI（ChatGLM）</description>
 	<version>zhipuai-sdk-java-v4-1.0.0-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
@@ -214,8 +214,6 @@
 					<artifactId>maven-javadoc-plugin</artifactId>
 					<version>${maven-javadoc-plugin.version}</version>
 					<configuration>
-						<aggregate>true</aggregate>
-						<argLine>-Dfile.encoding=UTF-8</argLine>
 						<charset>${project.build.sourceEncoding}</charset>
 						<encoding>${project.build.sourceEncoding}</encoding>
 						<docencoding>${project.build.sourceEncoding}</docencoding>
@@ -371,7 +369,7 @@
         <maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
 		<maven-nexus-staging-plugin.version>1.6.8</maven-nexus-staging-plugin.version>
 		<java.version>17</java.version>
-		<spring-ai.version>1.0.3</spring-ai.version>
+		<spring-ai.version>2.0.0</spring-ai.version>
 		<zhipuai-sdk-java.version>release-V4-2.0.2</zhipuai-sdk-java.version>
 	</properties>
 
